@@ -1,0 +1,21 @@
+{
+  "name": "f1-dash-bot",
+  "version": "1.0.0",
+  "description": "F1 real-time Discord bot powered by f1-dash",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7",
+    "eventsource": "^3.0.5",
+    "node-cron": "^3.0.3",
+    "node-ical": "^0.27.3",
+    "pako": "^2.1.0",
+    "ws": "^8.22.0"
+  }
+}
