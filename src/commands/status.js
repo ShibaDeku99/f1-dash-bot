@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import { baseEmbed, COLORS } from '../formatters/utils.js';
-import { getConnectionStatus } from '../f1Client.js';
+import { getConnectionStatus, getConnectionMode } from '../f1Client.js';
 import { f1State } from '../state.js';
 
 export const data = new SlashCommandBuilder()
@@ -11,14 +11,16 @@ export async function execute(interaction) {
   await interaction.deferReply();
 
   const connected = getConnectionStatus();
+  const mode = getConnectionMode();
   const sessionInfo = f1State.sessionInfo;
   const sessionStatus = f1State.sessionStatus;
 
+  const modeText = mode === 'cdn' ? 'Official CDN Mirror' : 'SignalR Core';
   const embed = baseEmbed('📡 Bot Status', COLORS.info)
     .addFields(
       {
         name: '🔴 F1 Official Live Timing',
-        value: connected ? '🟢 Connected (SignalR Core)' : '🔴 Disconnected',
+        value: connected ? `🟢 Connected (${modeText})` : '🔴 Disconnected',
         inline: true,
       },
       {

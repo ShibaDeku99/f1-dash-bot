@@ -51,9 +51,29 @@ class F1State {
    * Called on SSE `update` event — partial state patch
    */
   handleUpdate(data) {
-    if (!this.state) return;
+    if (!this.state) {
+      this.handleInitial(data);
+      return;
+    }
     const { CarDataZ, PositionZ, ...rest } = data;
     this.state = merge(this.state, rest);
+    this.emit('update', this.state);
+  }
+
+  /**
+   * Called on full snapshot updates (e.g. from CDN polling)
+   */
+  handleSnapshot(data) {
+    const { CarDataZ, PositionZ, ...rest } = data;
+    if (!this.state) {
+      this.state = rest;
+      this.emit('initial', this.state);
+    } else {
+      this.state = {
+        ...this.state,
+        ...rest,
+      };
+    }
     this.emit('update', this.state);
   }
 
@@ -87,7 +107,7 @@ class F1State {
   get extrapolatedClock()     { return this.state?.ExtrapolatedClock; }
 
   isSessionLive() {
-    const status = this.sessionStatus?.Status;
+    const status = this.sessionStatus?.Status || this.sessionInfo?.SessionStatus;
     return status === 'Started';
   }
 }
