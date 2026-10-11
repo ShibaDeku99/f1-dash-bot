@@ -39,18 +39,28 @@ async function negotiateSignalR() {
 
   // 1. Send OPTIONS request to obtain AWSALBCORS routing cookie
   try {
-    const optRes = await fetch(negotiateUrl, { method: 'OPTIONS' });
+    const optRes = await fetch(negotiateUrl, {
+      method: 'OPTIONS',
+      headers: {
+        'User-Agent': 'BestHTTP',
+        'Accept': '*/*',
+      },
+    });
     const setCookie = optRes.headers.get('set-cookie');
     if (setCookie) {
       const match = setCookie.match(/AWSALBCORS=[^;]+/);
       if (match) cookie = match[0];
     }
   } catch (err) {
-    // Non-fatal, continue to POST
+    // Non-fatal
   }
 
   // 2. Send POST request with negotiateVersion=1
-  const postHeaders = { 'Content-Type': 'application/json' };
+  const postHeaders = {
+    'Content-Type': 'application/json',
+    'User-Agent': 'BestHTTP',
+    'Accept': '*/*',
+  };
   if (cookie) postHeaders['Cookie'] = cookie;
 
   const postRes = await fetch(`${negotiateUrl}?negotiateVersion=1`, {
@@ -59,14 +69,14 @@ async function negotiateSignalR() {
   });
 
   if (!postRes.ok) {
-    throw new Error(`SignalR negotiate failed with HTTP ${postRes.status}`);
+    throw new Error(`HTTP ${postRes.status}`);
   }
 
   const negoData = await postRes.json();
   const connectionToken = negoData.connectionToken || negoData.connectionId;
 
   if (!connectionToken) {
-    throw new Error('SignalR negotiate did not return connectionToken');
+    throw new Error('No connectionToken in response');
   }
 
   return { connectionToken, cookie };
@@ -87,8 +97,19 @@ export function connectF1(onConnect, onDisconnect) {
 
   (async () => {
     try {
-      const { connectionToken, cookie } = await negotiateSignalR();
-      const wsUrl = `wss://${SIGNALR_HOST}?id=${encodeURIComponent(connectionToken)}`;
+      let wsUrl = `wss://${SIGNALR_HOST}`;
+      let cookie = '';
+
+      // Try negotiation, fallback gracefully to direct WebSocket if cloud WAF blocks HTTP POST
+      try {
+        const nego = await negotiateSignalR();
+        if (nego?.connectionToken) {
+          wsUrl = `wss://${SIGNALR_HOST}?id=${encodeURIComponent(nego.connectionToken)}`;
+          cookie = nego.cookie || '';
+        }
+      } catch (negoErr) {
+        console.log(`ℹ️  SignalR negotiate bypassed (${negoErr.message}), connecting directly via WebSocket...`);
+      }
 
       const wsHeaders = {
         'User-Agent': 'BestHTTP',
